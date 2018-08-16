@@ -1,0 +1,22 @@
+$gray:#fff;
+$bgColor:rgba(247, 247, 247, 1);
+$white:#808080;
+$black:#222222;
+// flex
+@mixin flex($space-between: space-between) {
+    display: flex;
+    flex-direction: row;
+    justify-content: $space-between;
+    align-items: center;
+}
+
+// modal
+@mixin modalWrap() {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 102; // @include flex(center);
+}

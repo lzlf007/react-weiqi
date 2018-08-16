@@ -1,0 +1,36 @@
+.container {
+    position: relative;
+    margin-top: 86px;
+    width: 528px;
+    height: 806px;
+    /*background: url('../../assets/images/error-message-background.png') no-repeat;*/
+    background-size: 100% 100%;
+    overflow: hidden;
+    left: 55.47%;
+    transform: translate(-50%);
+}
+
+.container .text {
+    margin-left: 24px;
+    margin-top: 467px;
+    width: 400px;
+    height: 90px;
+    font-size: 30px;
+    color: #fff;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.container .button {
+    margin: 42px 0 0 102px;
+    padding: 0;
+    width: 240px;
+    height: 70px;
+    line-height: 70px;
+    font-size: 24px;
+    color: #fff;
+    border: 4px solid #fff;
+    border-radius: 74px;
+    background-color: rgba(0, 0, 0, 0);
+    outline: none;
+}
