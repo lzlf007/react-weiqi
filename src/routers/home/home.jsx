@@ -6,9 +6,9 @@ import Style from './style.scss';
 
 import WhiteBoard from '../../assets/images/whiteBoard.png';
 import BlackBoard from '../../assets/images/blackBoard.png';
-import MoveBlackBoard from '../../assets/images/blackMove.png';
 import Grid from '../../assets/images/grid.png';
 import MoverPiece from '../../assets/images/movePiece.png';
+import CleanBtn from '../../assets/images/btn_clean.png';
 
 Settings.defaultLocale = 'en';
 
@@ -24,6 +24,12 @@ class Weiqi extends Phaser.Scene {
     this.pieceGroup = [];
     // 棋盘上移动棋子前的集合
     this.beforeMovePieceGroup = [];
+    // 白色棋篓
+    this.whiteBoard = null;
+    // 黑色棋篓
+    this.blackBoard = null;
+    // 清空按钮
+    this.cleanBtn = null;
   }
 
   preload ()
@@ -33,7 +39,7 @@ class Weiqi extends Phaser.Scene {
     this.load.spritesheet('blackBoard', BlackBoard, { frameWidth: 210, frameHeight: 210 });
     this.load.spritesheet('grid', Grid, { frameWidth: 38, frameHeight: 38 });
     this.load.spritesheet('moverPiece', MoverPiece, { frameWidth: 38, frameHeight: 38 });
-    this.load.spritesheet('blackMovePiece', MoveBlackBoard, { frameWidth: 190, frameHeight: 190 });
+    this.load.spritesheet('cleanBtn', CleanBtn, { frameWidth: 169, frameHeight: 91 });
   }
   create()
   {
@@ -90,86 +96,22 @@ class Weiqi extends Phaser.Scene {
     {
       if(gridIndex>18){ gridIndex = 0; }
       let row = parseInt((i/19),10);
-      let grid = this.add.sprite(GAME_PARAMS.boardX+(gridIndex*GAME_PARAMS.gridSize), GAME_PARAMS.boardY+(row*GAME_PARAMS.gridSize), 'grid',0).setInteractive();
+      let grid = this.add.sprite(GAME_PARAMS.boardX+(gridIndex*GAME_PARAMS.gridSize), GAME_PARAMS.boardY+(row*GAME_PARAMS.gridSize), 'grid',0).setInteractive().setName('grid');
       grid.input.dropZone = true;
       grids.push(grid);
       gridIndex++;
     }
 
-    let timer = null;
-    let timerCount = 0;
-    this.input.on('gameobjectdown', function (pointer, gameObject)
-    {
-      //点击棋子
-      if(gameObject.name==='piece')
-      {
-        timerCount++;
-        timer = setTimeout(function(){
-          timerCount = 0;
-          clearTimeout(timer);
-        },250);
-
-        if( timerCount===2 )
-        {
-
-          let targetX = gameObject.frame.name === 0 ? blackBoard.x : whiteBoard.x;
-          let targetY = gameObject.frame.name === 0 ? blackBoard.y : whiteBoard.y;
-
-          this.tweens.add({
-            targets: gameObject,
-            props: {
-              x: { value: targetX, duration: 600, ease: 'Power2' },
-              y: { value: targetY, duration: 650, ease: 'Power2' }
-            },
-            onComplete:function()
-            {
-              gameObject.destroy();
-            }
-          });
-        };
-      }
-      //点击棋篓
-      if(gameObject.name==="blackMovePiece" || gameObject.name==="whiteMovePiece")
-      {
-
-        blackBoard.setFrame(0);
-        whiteBoard.setFrame(0);
-
-        let frame = gameObject.frame.name;
-        if(frame===0){
-          gameObject.setFrame(1);
-        }else{
-          gameObject.setFrame(0);
-        }
-      }
-
-    },this);
-
-    /*this.input.on('gameobjectup', function (pointer, gameObject)
-    {
-      if(gameObject.name==='piece')
-      {
-        console.log(timerCount);
-
-
-      }
-
-    });*/
-
     // 生成棋篓
-    let blackBoard = this.add.sprite(255, 865, 'blackBoard',0).setInteractive().setName("blackMovePiece");
-    this.input.setDraggable(blackBoard);
+    this.blackBoard = this.add.sprite(255, 865, 'blackBoard',0).setInteractive().setName("blackMovePiece");
+    this.input.setDraggable(this.blackBoard);
 
-    let whiteBoard = this.add.sprite(495, 865, 'whiteBoard',0).setInteractive().setName("whiteMovePiece");
-    this.input.setDraggable(whiteBoard);
+    this.whiteBoard = this.add.sprite(495, 865, 'whiteBoard',0).setInteractive().setName("whiteMovePiece");
+    this.input.setDraggable(this.whiteBoard);
 
-    // 创建黑色棋篓可移动区域
-    //let blackMovePiece = this.add.sprite(255, 865, 'blackMovePiece',0).setInteractive().setName("blackMovePiece");
-    //this.input.setDraggable(blackMovePiece);
+    // 添加清空按钮
+    this.cleanBtn = this.add.sprite(374, 1030, 'cleanBtn',0).setInteractive().setName("cleanBtn");
 
-    // 创建白色棋篓可移动区域
-    //let whiteMovePiece = this.add.sprite(495, 865, 'blackMovePiece',0).setInteractive().setName("whiteMovePiece");
-    //this.input.setDraggable(whiteMovePiece);
 
     // 设置拖拽延时
     // this.input.dragTimeThreshold = 50;
@@ -189,6 +131,103 @@ class Weiqi extends Phaser.Scene {
     // 设置棋子集合
     this.pieceGroup = this.add.group();
 
+    // 画布点击事件
+    let timer = null;
+    let timerCount = 0;
+    this.input.on('gameobjectdown', function (pointer, gameObject)
+    {
+      const that = this;
+      // 点击棋子
+      if(gameObject.name==='piece')
+      {
+        //清除棋篓选中状态
+        this.cleanBoardState();
+        movePiece.x = -100;
+        movePiece.y = -100;
+
+        timerCount++;
+        timer = setTimeout(function(){
+          timerCount = 0;
+          clearTimeout(timer);
+        },250);
+
+        if( timerCount===2 )
+        {
+
+          let targetX = gameObject.frame.name === 0 ? this.blackBoard.x : this.whiteBoard.x;
+          let targetY = gameObject.frame.name === 0 ? this.blackBoard.y : this.whiteBoard.y;
+
+          this.tweens.add({
+            targets: gameObject,
+            props: {
+              x: { value: targetX, duration: 600, ease: 'Power2' },
+              y: { value: targetY, duration: 650, ease: 'Power2' }
+            },
+            onComplete:function()
+            {
+              gameObject.destroy();
+            }
+          });
+        };
+      }
+      // 点击棋篓
+      if(gameObject.name==="blackMovePiece" || gameObject.name==="whiteMovePiece")
+      {
+        // 清除棋篓选中状态
+        this.cleanBoardState();
+        movePiece.x = -100;
+        movePiece.y = -100;
+
+        let frame = gameObject.frame.name;
+        if(frame===0){
+          gameObject.setFrame(1);
+        }else{
+          gameObject.setFrame(0);
+        }
+
+        //初始化移动棋子位置
+        movePiece.setAlpha(1);
+        movePiece.x = gameObject.x+80;
+        movePiece.y = gameObject.y-80;
+        movePiece.setFrame(gameObject.name==="blackMovePiece"?0:1);
+
+      }
+      // 点击格子下棋子
+      if(gameObject.name==='grid')
+      {
+        let boardType = null;
+        if(this.blackBoard.frame.name===1){
+          boardType = 'black';
+        }
+        if(this.whiteBoard.frame.name===1){
+          boardType = 'white';
+        }
+
+        // 选中棋篓进行下子
+        if(boardType)
+        {
+          let origin = [movePiece.x,movePiece.y];
+          this.tweens.add({
+            targets: movePiece,
+            props: {
+              x: { value: gameObject.x, duration: 100, ease: 'Power2' },
+              y: { value: gameObject.y, duration: 150, ease: 'Power2' }
+            },
+            onComplete:function(){
+              let piece = that.add.sprite(movePiece.x, movePiece.y, 'moverPiece',(boardType==='black' ? 0 : 1)).setDepth(2).setInteractive().setName("piece");
+              that.input.setDraggable(piece);
+              that.pieceGroup.add(piece);
+              movePiece.x = origin[0];
+              movePiece.y = origin[1];
+            }
+          });
+        }
+
+
+      }
+
+    },this);
+
     // 画布移动开始事件
     this.input.on('dragstart', function (pointer, gameObject)
     {
@@ -204,7 +243,7 @@ class Weiqi extends Phaser.Scene {
         movePieceXY[1] = gameObject.y;
       }
 
-      //在棋盘上拖动棋子
+      // 在棋盘上拖动棋子
       if(gameObject.name==='piece')
       {
         pieceXY[0] = gameObject.x;
@@ -301,8 +340,8 @@ class Weiqi extends Phaser.Scene {
           let piece = this.add.sprite(movePiece.x, movePiece.y, 'moverPiece',frame).setDepth(2).setInteractive().setName("piece");
           this.input.setDraggable(piece);
           this.pieceGroup.add(piece);
-          blackBoard.setFrame(0);
-          whiteBoard.setFrame(0);
+
+          this.cleanBoardState();
           movePiece.x = -100;
           movePiece.y = -100;
         }
@@ -313,12 +352,12 @@ class Weiqi extends Phaser.Scene {
             this.tweens.add({
               targets: movePiece,
               props: {
-                x: { value: movePieceXY[0], duration: 600, ease: 'Power2' },
-                y: { value: movePieceXY[1], duration: 650, ease: 'Power2' }
+                x: { value: gameObject.x+80, duration: 600, ease: 'Power2' },
+                y: { value: gameObject.y-80, duration: 650, ease: 'Power2' }
               },
               onComplete:function(){
-                movePiece.x = -100;
-                movePiece.y = -100;
+                movePiece.x = gameObject.x+80;
+                movePiece.y = gameObject.y-80;
               }
             });
 
@@ -349,10 +388,6 @@ class Weiqi extends Phaser.Scene {
 
       console.log(this.pieceGroup.getChildren());
 
-      //删除棋子
-      /*if(pieceGroup.getLength()>2){
-        piece.destroy()
-      }*/
     },this);
 
   }
@@ -374,6 +409,14 @@ class Weiqi extends Phaser.Scene {
     }
     return isEmpty;
   }
+
+  //清除棋篓选中状态
+  cleanBoardState ()
+  {
+    this.blackBoard.setFrame(0);
+    this.whiteBoard.setFrame(0);
+  }
+
 }
 
 
