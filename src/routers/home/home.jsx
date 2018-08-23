@@ -1,14 +1,21 @@
-import React, { Component } from 'react';
+import React, { Component,Fragment } from 'react';
 import { Settings } from 'luxon';
 import Phaser from 'phaser';
 
 import Style from './style.scss';
 
+import {
+  Course,
+} from '../../service';
+
+import { VALUE } from '../../constants';
+
 import WhiteBoard from '../../assets/images/whiteBoard.png';
 import BlackBoard from '../../assets/images/blackBoard.png';
 import Grid from '../../assets/images/grid.png';
 import MoverPiece from '../../assets/images/movePiece.png';
-import CleanBtn from '../../assets/images/btn_clean.png';
+import CleanBtn from '../../assets/images/btnClean.png';
+
 
 Settings.defaultLocale = 'en';
 
@@ -30,6 +37,8 @@ class Weiqi extends Phaser.Scene {
     this.blackBoard = null;
     // 清空按钮
     this.cleanBtn = null;
+    // 保存按钮
+    this.saveBtn = null;
   }
 
   preload ()
@@ -43,7 +52,6 @@ class Weiqi extends Phaser.Scene {
   }
   create()
   {
-
     const GAME_PARAMS = {
       boardX:33,// 棋盘起始x坐标
       boardY:33,// 棋盘起始y坐标
@@ -110,7 +118,9 @@ class Weiqi extends Phaser.Scene {
     this.input.setDraggable(this.whiteBoard);
 
     // 添加清空按钮
-    this.cleanBtn = this.add.sprite(374, 1030, 'cleanBtn',0).setInteractive().setName("cleanBtn");
+    this.cleanBtn = this.add.sprite(274, 1030, 'cleanBtn',0).setInteractive().setName("cleanBtn");
+    // 添加保存按钮
+    this.saveBtn = this.add.sprite(474, 1030, 'cleanBtn',2).setInteractive().setName("saveBtn");
 
 
     // 设置拖拽延时
@@ -140,22 +150,30 @@ class Weiqi extends Phaser.Scene {
       // 点击棋子
       if(gameObject.name==='piece')
       {
-        //清除棋篓选中状态
+        // 清除棋篓选中状态
         this.cleanBoardState();
         movePiece.x = -100;
         movePiece.y = -100;
 
+        // 设置棋子选中状态
+        this.cleanPieceState();
+        const frame = gameObject.frame.name%2 ===0 ? 2 : 3;
+        gameObject.setFrame(frame);
+
+        //设置棋子选中状态
         timerCount++;
         timer = setTimeout(function(){
           timerCount = 0;
           clearTimeout(timer);
         },250);
 
+        // 双击去子
         if( timerCount===2 )
         {
 
-          let targetX = gameObject.frame.name === 0 ? this.blackBoard.x : this.whiteBoard.x;
-          let targetY = gameObject.frame.name === 0 ? this.blackBoard.y : this.whiteBoard.y;
+          let targetX = gameObject.frame.name % 2 === 0 ? this.blackBoard.x : this.whiteBoard.x;
+          let targetY = gameObject.frame.name % 2 === 0 ? this.blackBoard.y : this.whiteBoard.y;
+          gameObject.setFrame(gameObject.frame.name%2 ? 1 : 0);
 
           this.tweens.add({
             targets: gameObject,
@@ -178,6 +196,9 @@ class Weiqi extends Phaser.Scene {
         movePiece.x = -100;
         movePiece.y = -100;
 
+        // 清除棋篓选中状态
+        this.cleanPieceState();
+
         let frame = gameObject.frame.name;
         if(frame===0){
           gameObject.setFrame(1);
@@ -192,7 +213,7 @@ class Weiqi extends Phaser.Scene {
         movePiece.setFrame(gameObject.name==="blackMovePiece"?0:1);
 
       }
-      // 点击格子下棋子
+      // 点击格子 (添加棋子|移动棋子)
       if(gameObject.name==='grid')
       {
         let boardType = null;
@@ -202,7 +223,6 @@ class Weiqi extends Phaser.Scene {
         if(this.whiteBoard.frame.name===1){
           boardType = 'white';
         }
-
         // 选中棋篓进行下子
         if(boardType)
         {
@@ -211,7 +231,7 @@ class Weiqi extends Phaser.Scene {
             targets: movePiece,
             props: {
               x: { value: gameObject.x, duration: 100, ease: 'Power2' },
-              y: { value: gameObject.y, duration: 150, ease: 'Power2' }
+              y: { value: gameObject.y, duration: 100, ease: 'Power2' }
             },
             onComplete:function(){
               let piece = that.add.sprite(movePiece.x, movePiece.y, 'moverPiece',(boardType==='black' ? 0 : 1)).setDepth(2).setInteractive().setName("piece");
@@ -222,7 +242,42 @@ class Weiqi extends Phaser.Scene {
             }
           });
         }
+        // 移动棋子
+        const pieceGroup = this.pieceGroup.getChildren().filter(item=>{
+          return item.frame.name > 1;
+        });
+        if(pieceGroup && pieceGroup.length>0)
+        {
+          this.tweens.add({
+            targets: pieceGroup[0],
+            props: {
+              x: { value: gameObject.x, duration: 300, ease: 'Power2' },
+              y: { value: gameObject.y, duration: 300, ease: 'Power2' }
+            }
+          });
+        }
 
+      }
+
+      // 点击清空棋盘按钮
+      if(gameObject.name==='cleanBtn')
+      {
+        this.pieceGroup.clear(false,true);
+        this.cleanBtn.setFrame(1);
+        setTimeout(()=>{this.cleanBtn.setFrame(0)},150);
+        /*if(window.confirm('确定要清空棋盘么？')){
+
+          document.getElementsByTagName("canvas")[0].focus();
+        }*/
+      }
+
+      // 点击保存棋盘数据
+      if(gameObject.name==='saveBtn')
+      {
+        this.saveBtn.setFrame(3);
+        setTimeout(()=>{this.saveBtn.setFrame(2)},150);
+        //console.log('hi');
+        this.getActivityConfig();
 
       }
 
@@ -311,15 +366,6 @@ class Weiqi extends Phaser.Scene {
       }
     });
 
-    /*this.input.on('dragenter', function (pointer, gameObject, dropZone) {
-
-    });
-
-    this.input.on('dragleave', function (pointer, gameObject, dropZone) {
-
-    });*/
-
-
     // 画布移动结束事件
     this.input.on('dragend', function (pointer, gameObject)
     {
@@ -386,7 +432,7 @@ class Weiqi extends Phaser.Scene {
       guidelines.x = -1000;
       guidelines.y = -1000;
 
-      console.log(this.pieceGroup.getChildren());
+      // console.log(this.pieceGroup.getChildren());
 
     },this);
 
@@ -417,13 +463,52 @@ class Weiqi extends Phaser.Scene {
     this.whiteBoard.setFrame(0);
   }
 
+  //清除棋子选中状态
+  cleanPieceState ()
+  {
+
+    if(this.pieceGroup.getChildren() && this.pieceGroup.getLength()>0)
+    {
+      this.pieceGroup.getChildren().forEach(item=>{
+        if(item.frame.name===2)
+        {
+          item.setFrame(0);
+        }
+        else if(item.frame.name===3)
+        {
+          item.setFrame(1);
+        }
+      })
+    }
+  }
+
+  // 保存棋子数据
+  getActivityConfig = () => {
+
+    Course.getActivityConfig(VALUE.ACT_ID).then(result => {
+      if(result && result.startTime)
+      {
+        console.log(result);
+      }
+    });
+  };
+
 }
 
 
 class Home extends Component {
 
-  componentDidMount() {
+  state = {
+    abc:null,
+  };
+
+  componentDidMount()
+  {
     this.initWeiqi();
+  }
+
+  test = () => {
+    console.log('242423');
   }
 
   initWeiqi = () =>
@@ -449,9 +534,10 @@ class Home extends Component {
 
   render() {
     return (
+      <Fragment>
       <div id="weiqi" className={Style.wrapper}>
-
       </div>
+      </Fragment>
     );
   }
 }

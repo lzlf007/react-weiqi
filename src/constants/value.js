@@ -3,5 +3,5 @@ export default {
 
   ANDORID_OS: 'AndroidOS',
   IOS: 'iOS',
-  ACT_ID: 1,// 活动id
+  ACT_ID: 2,// 活动id
 };

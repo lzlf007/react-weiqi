@@ -1,7 +1,7 @@
 const domainObject = {
   release: '//api.xiaoqishen.cn',
   preview: '//pre.xiaoqishen.cn',
-  develop: '//dev.xiaoqishen.cn'
+  develop: '//dev2.xiaoqishen.cn'
 };
 
 const domain = domainObject[process.env.REACT_APP_STAGE];
