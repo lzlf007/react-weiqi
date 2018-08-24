@@ -20,6 +20,7 @@ import CleanBtn from '../../assets/images/btnClean.png';
 Settings.defaultLocale = 'en';
 
 let game;
+let parentThis;
 
 class Weiqi extends Phaser.Scene {
 
@@ -39,7 +40,16 @@ class Weiqi extends Phaser.Scene {
     this.cleanBtn = null;
     // 保存按钮
     this.saveBtn = null;
+    // 棋盘参数
+    this.GAME_PARAMS = {
+      boardX:33,// 棋盘起始x坐标
+      boardY:33,// 棋盘起始y坐标
+      gridSize:38,// 棋盘格子大小
+      maxBoardX:33+18*38,// 棋盘上x最大值
+      maxBoardY:33+18*38,// 棋盘上y最大值
+    }
   }
+
 
   preload ()
   {
@@ -52,13 +62,13 @@ class Weiqi extends Phaser.Scene {
   }
   create()
   {
-    const GAME_PARAMS = {
-      boardX:33,// 棋盘起始x坐标
-      boardY:33,// 棋盘起始y坐标
-      gridSize:38,// 棋盘格子大小
-      maxBoardX:33+18*38,// 棋盘上x最大值
-      maxBoardY:33+18*38,// 棋盘上y最大值
-    }
+
+    // 设置棋子集合
+    this.pieceGroup = this.add.group();
+
+    //初始化棋盘数据
+    this.initPieceBoard();
+
     //添加新棋子的原始坐标
     let movePieceXY = [0,0];
     //当前棋盘上拖动棋子的原始坐标
@@ -78,17 +88,17 @@ class Weiqi extends Phaser.Scene {
     for( let i=0;i<19;i++ )
     {
       let lineObj = this.add.graphics({ lineStyle: { width: 2, color: 0x560000 } });
-      let verticalLine = new Phaser.Geom.Line(GAME_PARAMS.boardX+(i*GAME_PARAMS.gridSize), GAME_PARAMS.boardY, GAME_PARAMS.boardX+(i*GAME_PARAMS.gridSize), GAME_PARAMS.gridSize*18+GAME_PARAMS.boardX);
-      let horizontal = new Phaser.Geom.Line(GAME_PARAMS.boardX, GAME_PARAMS.boardX+(i*GAME_PARAMS.gridSize), GAME_PARAMS.gridSize*18+GAME_PARAMS.boardY,GAME_PARAMS.boardY+(i*GAME_PARAMS.gridSize));
+      let verticalLine = new Phaser.Geom.Line(this.GAME_PARAMS.boardX+(i*this.GAME_PARAMS.gridSize), this.GAME_PARAMS.boardY, this.GAME_PARAMS.boardX+(i*this.GAME_PARAMS.gridSize), this.GAME_PARAMS.gridSize*18+this.GAME_PARAMS.boardX);
+      let horizontal = new Phaser.Geom.Line(this.GAME_PARAMS.boardX, this.GAME_PARAMS.boardX+(i*this.GAME_PARAMS.gridSize), this.GAME_PARAMS.gridSize*18+this.GAME_PARAMS.boardY,this.GAME_PARAMS.boardY+(i*this.GAME_PARAMS.gridSize));
       lineObj.strokeLineShape(verticalLine);
       lineObj.strokeLineShape(horizontal);
     }
 
     // 绘制网络圆点
     const weiqiBoardPoints = [
-      [GAME_PARAMS.gridSize*3+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*3+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*9+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*3+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*15+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*3+GAME_PARAMS.boardY],
-      [GAME_PARAMS.gridSize*3+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*9+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*9+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*9+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*15+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*9+GAME_PARAMS.boardY],
-      [GAME_PARAMS.gridSize*3+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*15+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*9+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*15+GAME_PARAMS.boardY],[GAME_PARAMS.gridSize*15+GAME_PARAMS.boardX,GAME_PARAMS.gridSize*15+GAME_PARAMS.boardY],
+      [this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardY],
+      [this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardY],
+      [this.GAME_PARAMS.gridSize*3 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*9 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardY],[this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardX, this.GAME_PARAMS.gridSize*15 + this.GAME_PARAMS.boardY],
     ];
     for (let i=0;i<weiqiBoardPoints.length;i++)
     {
@@ -104,7 +114,7 @@ class Weiqi extends Phaser.Scene {
     {
       if(gridIndex>18){ gridIndex = 0; }
       let row = parseInt((i/19),10);
-      let grid = this.add.sprite(GAME_PARAMS.boardX+(gridIndex*GAME_PARAMS.gridSize), GAME_PARAMS.boardY+(row*GAME_PARAMS.gridSize), 'grid',0).setInteractive().setName('grid');
+      let grid = this.add.sprite(this.GAME_PARAMS.boardX+(gridIndex * this.GAME_PARAMS.gridSize), this.GAME_PARAMS.boardY+(row * this.GAME_PARAMS.gridSize), 'grid',0).setInteractive().setName('grid');
       grid.input.dropZone = true;
       grids.push(grid);
       gridIndex++;
@@ -138,8 +148,7 @@ class Weiqi extends Phaser.Scene {
     let lineY = new Phaser.Geom.Line(0, -342, 0, 342);
     guidelines.add([ guidelinesGraphics.strokeLineShape(lineX),guidelinesGraphics.strokeLineShape(lineY) ]);
 
-    // 设置棋子集合
-    this.pieceGroup = this.add.group();
+
 
     // 画布点击事件
     let timer = null;
@@ -253,6 +262,9 @@ class Weiqi extends Phaser.Scene {
             props: {
               x: { value: gameObject.x, duration: 300, ease: 'Power2' },
               y: { value: gameObject.y, duration: 300, ease: 'Power2' }
+            },
+            onComplete:function(){
+              pieceGroup[0].setFrame(pieceGroup[0].frame.name%2===0 ? 0 : 1)
             }
           });
         }
@@ -274,10 +286,13 @@ class Weiqi extends Phaser.Scene {
       // 点击保存棋盘数据
       if(gameObject.name==='saveBtn')
       {
+        /*parentThis.test();
+        parentThis.setState({
+          abc:'32423'
+        })*/
         this.saveBtn.setFrame(3);
         setTimeout(()=>{this.saveBtn.setFrame(2)},150);
-        //console.log('hi');
-        this.getActivityConfig();
+        this.saveData();
 
       }
 
@@ -337,21 +352,21 @@ class Weiqi extends Phaser.Scene {
       {
         gameObject.x = dragX;
         gameObject.y = dragY;
-        if(gameObject.x<GAME_PARAMS.boardX)
+        if(gameObject.x<this.GAME_PARAMS.boardX)
         {
-          gameObject.x = GAME_PARAMS.boardX;
+          gameObject.x = this.GAME_PARAMS.boardX;
         }
-        if(gameObject.x>GAME_PARAMS.maxBoardX)
+        if(gameObject.x>this.GAME_PARAMS.maxBoardX)
         {
-          gameObject.x = GAME_PARAMS.maxBoardX;
+          gameObject.x = this.GAME_PARAMS.maxBoardX;
         }
-        if(gameObject.y<GAME_PARAMS.boardY)
+        if(gameObject.y<this.GAME_PARAMS.boardY)
         {
-          gameObject.y = GAME_PARAMS.boardY;
+          gameObject.y = this.GAME_PARAMS.boardY;
         }
-        if(gameObject.y>GAME_PARAMS.maxBoardY)
+        if(gameObject.y>this.GAME_PARAMS.maxBoardY)
         {
-          gameObject.y = GAME_PARAMS.maxBoardY;
+          gameObject.y = this.GAME_PARAMS.maxBoardY;
         }
         for(let i=0;i<grids.length;i++)
         {
@@ -375,10 +390,10 @@ class Weiqi extends Phaser.Scene {
       {
         //如果拖拽到棋盘内则添加棋子
         if(
-          movePiece.x>=GAME_PARAMS.boardX
-          && movePiece.x<=GAME_PARAMS.boardX+GAME_PARAMS.gridSize*18
-          && movePiece.y>=GAME_PARAMS.boardY
-          && movePiece.y<=GAME_PARAMS.boardY+GAME_PARAMS.gridSize*18
+          movePiece.x>=this.GAME_PARAMS.boardX
+          && movePiece.x<=this.GAME_PARAMS.boardX+this.GAME_PARAMS.gridSize*18
+          && movePiece.y>=this.GAME_PARAMS.boardY
+          && movePiece.y<=this.GAME_PARAMS.boardY+this.GAME_PARAMS.gridSize*18
           && this.checkPiecePosition(movePiece.x,movePiece.y)
         )
         {
@@ -427,6 +442,10 @@ class Weiqi extends Phaser.Scene {
             }
           });
         }
+        else
+        {
+          gameObject.setFrame(gameObject.frame.name%2===0 ? 0 : 1);
+        }
       }
 
       guidelines.x = -1000;
@@ -436,6 +455,20 @@ class Weiqi extends Phaser.Scene {
 
     },this);
 
+  }
+
+  //初始化棋盘数据
+  initPieceBoard = () =>
+  {
+    const list = parentThis.state.list;
+    if(list && list.length>0)
+    {
+      list.forEach(item=>{
+        let piece = this.add.sprite((this.GAME_PARAMS.boardX+item.x*this.GAME_PARAMS.gridSize), (this.GAME_PARAMS.boardY+item.y*this.GAME_PARAMS.gridSize), 'moverPiece',item.role).setDepth(2).setInteractive().setName("piece");
+        this.input.setDraggable(piece);
+        this.pieceGroup.add(piece);
+      })
+    }
   }
 
   /*
@@ -483,14 +516,21 @@ class Weiqi extends Phaser.Scene {
   }
 
   // 保存棋子数据
-  getActivityConfig = () => {
-
-    Course.getActivityConfig(VALUE.ACT_ID).then(result => {
-      if(result && result.startTime)
-      {
-        console.log(result);
+  saveData = () => {
+    const pieceGroup = this.pieceGroup.getChildren();
+    if(pieceGroup.length<1)
+    {
+      alert('请先摆放棋谱');
+      return;
+    }
+    const groupData = pieceGroup.map(list=>{
+      return {
+        role: list.frame.name%2 === 0 ? 0 : 1,
+        x:Math.round((list.x-this.GAME_PARAMS.boardX)/this.GAME_PARAMS.gridSize),
+        y:Math.round((list.y-this.GAME_PARAMS.boardY)/this.GAME_PARAMS.gridSize),
       }
-    });
+    })
+    console.log(groupData);
   };
 
 }
@@ -498,13 +538,35 @@ class Weiqi extends Phaser.Scene {
 
 class Home extends Component {
 
-  state = {
-    abc:null,
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      list:[],
+    };
+    parentThis = this;
+  }
+
 
   componentDidMount()
   {
-    this.initWeiqi();
+    Course.getActivityConfig(VALUE.ACT_ID).then(result => {
+      if(result)
+      {
+        result = [
+          {role: 0, x: 7, y: 5},
+          {role: 0, x: 4, y: 6},
+          {role: 0, x: 5, y: 11},
+          {role: 1, x: 0, y: 9},
+          {role: 1, x: 2, y: 11},
+          {role: 1, x: 7, y: 9},
+        ];
+        this.setState({
+          list:result
+        });
+        this.initWeiqi();
+      }
+    });
+
   }
 
   test = () => {
@@ -519,7 +581,8 @@ class Home extends Component {
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor:'#742502',
-      scene: [ Weiqi]
+      scene: [ Weiqi],
+      url:'https://www.xiaoqishen.com/',
       /*scene: {
         preload: this.preload,
         create: this.create,
@@ -537,6 +600,7 @@ class Home extends Component {
       <Fragment>
       <div id="weiqi" className={Style.wrapper}>
       </div>
+      {/*<p>{this.state.abc}</p>*/}
       </Fragment>
     );
   }
