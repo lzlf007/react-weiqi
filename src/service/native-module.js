@@ -2,14 +2,13 @@ import MobileDetect from 'mobile-detect';
 import { VALUE } from '../constants';
 import StudentRoute from './student-route';
 import TeacherRoute from './teacher-route';
-import {Store, Util} from '../utils';
+import { Util } from '../utils';
 
 export default class NativeModule {
   static StudentRoute = StudentRoute;
   static TeacherRoute = TeacherRoute;
 
   static disableAndroidPullToRefresh() {
-
     window.HostApp.setRefreshEnabled(false);
     /*const webview = window.ShowWebViewActivity;
 
@@ -25,7 +24,12 @@ export default class NativeModule {
 
     if (md.os() === VALUE.ANDORID_OS && window.HostApp) {
       //window.ShowWebViewActivity.showShareDialog(params.title, params.desc, params.url, params.pic);
-      window.HostApp.shareDialog(params.title, params.desc, params.url, params.pic)
+      window.HostApp.shareDialog(
+        params.title,
+        params.desc,
+        params.url,
+        params.pic
+      );
     }
 
     if (md.os() === VALUE.IOS) {
@@ -33,22 +37,26 @@ export default class NativeModule {
         params.title
       }&url=${params.url}`;*/
       // 获取 token
-      const shareParams = {
+      /*const shareParams = {
         'title':params.title,
         'desc':params.desc,
         'urlString':params.url,
         'thumbUrl':params.pic
-      };
-      Util.setupWebViewJavascriptBridge( (bridge)=> {
-        bridge.callHandler('xqs_sendLinkContent', {
-          'title':params.title,
-          'desc':params.desc,
-          'urlString':params.url,
-          'thumbUrl':params.pic
-        },(res)=> {
-           console.log(res);
-        })
-      })
+      };*/
+      Util.setupWebViewJavascriptBridge(bridge => {
+        bridge.callHandler(
+          'xqs_sendLinkContent',
+          {
+            title: params.title,
+            desc: params.desc,
+            urlString: params.url,
+            thumbUrl: params.pic
+          },
+          res => {
+            console.log(res);
+          }
+        );
+      });
     }
   }
 
