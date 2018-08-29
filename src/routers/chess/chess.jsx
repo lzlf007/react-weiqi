@@ -17,6 +17,7 @@ import ChessBoard from '../../assets/images/chess_board.png';
 import Grid from '../../assets/images/chess_grid.png';
 import CleanBtn from '../../assets/images/btnClean.png';
 import Piece from '../../assets/images/chess_piece.png';
+import PieceBasket from '../../assets/images/chess_basket.png';
 
 Settings.defaultLocale = 'en';
 
@@ -33,10 +34,8 @@ class ChessCanvas extends Phaser.Scene {
     this.beforeMovePieceGroup = [];
     // 白色棋篓
     this.whiteBoard = null;
-    // 黑色棋篓
-    this.blackBoard = null;
-    // 清空按钮
-    this.cleanBtn = null;
+    // 棋篓集合
+    this.pieceBasketGroup = [];
     // 保存按钮
     this.saveBtn = null;
     // 棋盘参数
@@ -87,6 +86,22 @@ class ChessCanvas extends Phaser.Scene {
       { frame: 2, role: 2 },
       { frame: 1, role: 1 }
     ];
+    // 棋篓初始数据
+    this.pieceBasketData = [
+      { frame: 0, role: 0, x: 68, y: 816 },
+      { frame: 1, role: 1, x: 183, y: 816 },
+      { frame: 2, role: 2, x: 298, y: 816 },
+      { frame: 3, role: 3, x: 68, y: 931 },
+      { frame: 4, role: 4, x: 183, y: 931 },
+      { frame: 5, role: 5, x: 298, y: 931 },
+
+      { frame: 6, role: 10, x: 454, y: 816 },
+      { frame: 7, role: 11, x: 569, y: 816 },
+      { frame: 8, role: 12, x: 684, y: 816 },
+      { frame: 9, role: 13, x: 454, y: 931 },
+      { frame: 10, role: 14, x: 569, y: 931 },
+      { frame: 11, role: 15, x: 684, y: 931 }
+    ];
   }
 
   preload() {
@@ -108,6 +123,10 @@ class ChessCanvas extends Phaser.Scene {
       frameWidth: 83,
       frameHeight: 83
     });
+    this.load.spritesheet('pieceBasket', PieceBasket, {
+      frameWidth: 100,
+      frameHeight: 100
+    });
     this.load.on('complete', function() {
       EventEmitter.emit('fetch-hide-loading');
     });
@@ -115,6 +134,8 @@ class ChessCanvas extends Phaser.Scene {
   create() {
     // 设置棋子集合
     this.pieceGroup = this.add.group();
+    // 设置棋篓集合
+    this.pieceBasketGroup = this.add.group();
 
     //初始化棋盘数据
     this.initPieceBoard();
@@ -152,7 +173,16 @@ class ChessCanvas extends Phaser.Scene {
     // 初始化摆放棋子
     this.initBoard();
 
+    // 初始化棋篓
+    this.initPieceBasket();
+
     this.input.dragDistanceThreshold = 5;
+
+    // 创建移动棋子
+    let newPiece = this.add
+      .sprite(68, 816, 'piece', 0)
+      .setAlpha(0)
+      .setDepth(5);
 
     // 画布点击事件
     let timer = null;
@@ -183,6 +213,12 @@ class ChessCanvas extends Phaser.Scene {
               });
           }
         }
+        // 从棋篓内拖动棋子到棋盘上
+        if (gameObject.name === 'pieceBasket') {
+          movePieceXY[0] = gameObject.x;
+          movePieceXY[1] = gameObject.y;
+          newPiece.setFrame(gameObject.frame.name).setTint(0xff0000);
+        }
       },
       this
     );
@@ -205,12 +241,30 @@ class ChessCanvas extends Phaser.Scene {
           }
         }
       }
+
+      // 从棋篓内拖动棋子到棋盘上
+      if (gameObject.name === 'pieceBasket') {
+        newPiece.setAlpha(1);
+        newPiece.x = dragX;
+        newPiece.y = dragY;
+        for (let i = 0; i < grids.length; i++) {
+          if (
+            Math.abs(newPiece.x - grids[i].x) <= 42 &&
+            Math.abs(newPiece.y - grids[i].y) <= 42
+          ) {
+            newPiece.x = grids[i].x;
+            newPiece.y = grids[i].y;
+          } else {
+          }
+        }
+      }
     });
 
     // 画布移动结束事件
     this.input.on(
       'dragend',
       function(pointer, gameObject) {
+        // 拖动棋盘上的棋子
         if (gameObject.name === 'grid') {
           if (this.movePiece) {
             this.checkPiecePosition(
@@ -222,7 +276,47 @@ class ChessCanvas extends Phaser.Scene {
             this.movePiece.setDepth(2);
             this.movePiece = null;
           }
-          console.log(this.pieceGroup.getChildren());
+          // console.log(this.pieceGroup.getChildren());
+        }
+
+        //拖拽添加黒棋或者白棋
+        if (gameObject.name === 'pieceBasket') {
+          //如果拖拽到棋盘内则添加棋子
+          if (
+            newPiece.x >= this.GAME_PARAMS.boardX &&
+            newPiece.x <= this.GAME_PARAMS.maxBoardX &&
+            newPiece.y >= this.GAME_PARAMS.boardY &&
+            newPiece.y <= this.GAME_PARAMS.maxBoardY &&
+            this.checkPiecePosition(newPiece.x, newPiece.y)
+          ) {
+            let piece = this.add
+              .sprite(newPiece.x, newPiece.y, 'piece', newPiece.frame.name)
+              .setDepth(2)
+              .setInteractive()
+              .setData({
+                type: newPiece.frame.name > 5 ? 'black' : 'white',
+                role: newPiece.frame.name
+              })
+              .setName('piece');
+            this.input.setDraggable(piece);
+            this.pieceGroup.add(piece);
+            newPiece.setAlpha(0);
+          } else {
+            this.tweens.add({
+              targets: newPiece,
+              props: {
+                x: {
+                  value: gameObject.x,
+                  duration: 600,
+                  ease: 'Power2'
+                },
+                y: { value: gameObject.y, duration: 650, ease: 'Power2' }
+              },
+              onComplete: function() {
+                newPiece.setAlpha(0);
+              }
+            });
+          }
         }
       },
       this
@@ -259,6 +353,28 @@ class ChessCanvas extends Phaser.Scene {
       this.pieceGroup.add(piece);
 
       j++;
+    }
+  };
+
+  // 初始化棋篓
+  initPieceBasket = () => {
+    for (let i = 0; i < this.pieceBasketData.length; i++) {
+      let pieceBasket = this.add
+        .sprite(
+          this.pieceBasketData[i].x,
+          this.pieceBasketData[i].y,
+          'pieceBasket',
+          this.pieceBasketData[i].frame
+        )
+        .setDepth(2)
+        .setInteractive()
+        .setData({
+          type: this.pieceBasketData[i].frame > 5 ? 'black' : 'white',
+          role: this.pieceBasketData[i].role
+        })
+        .setName('pieceBasket');
+      this.input.setDraggable(pieceBasket);
+      this.pieceBasketGroup.add(pieceBasket);
     }
   };
 
@@ -309,6 +425,7 @@ class ChessCanvas extends Phaser.Scene {
   checkPiecePosition(moveX, moveY, type, isInBoardMove) {
     let target = null,
       cleanPiece = null;
+    let isEmpty = true;
     const group = !isInBoardMove
       ? this.pieceGroup.getChildren()
       : this.beforeMovePieceGroup;
@@ -350,6 +467,13 @@ class ChessCanvas extends Phaser.Scene {
           this.pieceGroup.remove(cleanPiece, true);
         }
       }
+    }
+
+    if (!isInBoardMove) {
+      if (attr.length > 0) {
+        isEmpty = false;
+      }
+      return isEmpty;
     }
   }
 
@@ -424,7 +548,7 @@ class Chess extends Component {
 
   initWeiqi = () => {
     const config = {
-      type: Phaser.CANVAS,
+      type: Phaser.AUTO,
       parent: 'chess',
       width: window.innerWidth,
       height: window.innerHeight,
