@@ -49,6 +49,44 @@ class ChessCanvas extends Phaser.Scene {
     };
     // 当前拖动的棋子
     this.movePiece = null;
+    // 棋子拖动前位置
+    this.beforeMovePieceXY = [0, 0];
+    // 棋盘初始棋子摆放 黑：  车 马 相 后 王 相 马 车  兵*8  白：兵*8 车 马 相 后 王 相 马 车
+    this.boardData = [
+      { frame: 7, role: 11 },
+      { frame: 8, role: 12 },
+      { frame: 9, role: 13 },
+      { frame: 10, role: 14 },
+      { frame: 11, role: 15 },
+      { frame: 9, role: 13 },
+      { frame: 8, role: 12 },
+      { frame: 7, role: 11 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+      { frame: 6, role: 10 },
+
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 0, role: 0 },
+      { frame: 1, role: 1 },
+      { frame: 2, role: 2 },
+      { frame: 3, role: 3 },
+      { frame: 4, role: 4 },
+      { frame: 5, role: 5 },
+      { frame: 3, role: 3 },
+      { frame: 2, role: 2 },
+      { frame: 1, role: 1 }
+    ];
   }
 
   preload() {
@@ -105,7 +143,7 @@ class ChessCanvas extends Phaser.Scene {
         )
         .setInteractive()
         .setName('grid')
-        .setDepth(3);
+        .setDepth(10);
       this.input.setDraggable(grid);
       grids.push(grid);
       gridIndex++;
@@ -123,7 +161,7 @@ class ChessCanvas extends Phaser.Scene {
       'gameobjectdown',
       function(pointer, gameObject) {
         const that = this;
-        console.log(gameObject);
+        // console.log(gameObject);
       },
       this
     );
@@ -134,7 +172,16 @@ class ChessCanvas extends Phaser.Scene {
       function(pointer, gameObject) {
         // 在棋盘上拖动棋子
         if (gameObject.name === 'grid') {
-          this.movePiece = this.checkMovePiece(gameObject.x, gameObject.y);
+          if (this.checkMovePiece(gameObject.x, gameObject.y)) {
+            this.movePiece = this.checkMovePiece(gameObject.x, gameObject.y);
+            this.movePiece.setDepth(5);
+            this.beforeMovePieceXY = [this.movePiece.x, this.movePiece.y];
+            this.beforeMovePieceGroup = this.pieceGroup
+              .getChildren()
+              .map(item => {
+                return { x: item.x, y: item.y, type: item.getData('type') };
+              });
+          }
         }
       },
       this
@@ -143,7 +190,6 @@ class ChessCanvas extends Phaser.Scene {
     // 画布移动中事件
     this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
       // 在棋盘上拖动棋子
-      //console.log(gameObject);
       if (gameObject.name === 'grid') {
         if (this.movePiece) {
           this.movePiece.x = dragX;
@@ -166,8 +212,17 @@ class ChessCanvas extends Phaser.Scene {
       'dragend',
       function(pointer, gameObject) {
         if (gameObject.name === 'grid') {
-          this.movePiece = null;
-          this.pieceGroup.getChildren();
+          if (this.movePiece) {
+            this.checkPiecePosition(
+              this.movePiece.x,
+              this.movePiece.y,
+              this.movePiece.getData('type'),
+              true
+            );
+            this.movePiece.setDepth(2);
+            this.movePiece = null;
+          }
+          console.log(this.pieceGroup.getChildren());
         }
       },
       this
@@ -176,18 +231,35 @@ class ChessCanvas extends Phaser.Scene {
 
   // 初始化摆放棋子
   initBoard = () => {
-    let piece = this.add
-      .sprite(
-        this.GAME_PARAMS.boardX + 0 * this.GAME_PARAMS.gridSize,
-        this.GAME_PARAMS.boardY + 0 * this.GAME_PARAMS.gridSize,
-        'piece',
-        0
-      )
-      .setDepth(2)
-      .setInteractive()
-      .setName('piece');
-    this.input.setDraggable(piece);
-    this.pieceGroup.add(piece);
+    let j = 0;
+    for (let i = 0; i < this.boardData.length; i++) {
+      if (j > 7) {
+        j = 0;
+      }
+
+      let row = parseInt(i / 8, 10);
+      if (i > 15) {
+        row = row + 4;
+      }
+      let piece = this.add
+        .sprite(
+          this.GAME_PARAMS.boardX + j * this.GAME_PARAMS.gridSize,
+          this.GAME_PARAMS.boardY + row * this.GAME_PARAMS.gridSize,
+          'piece',
+          this.boardData[i].frame
+        )
+        .setDepth(2)
+        .setInteractive()
+        .setData({
+          type: this.boardData[i].frame > 5 ? 'black' : 'white',
+          role: this.boardData[i].role
+        })
+        .setName('piece');
+      this.input.setDraggable(piece);
+      this.pieceGroup.add(piece);
+
+      j++;
+    }
   };
 
   //初始化棋盘数据
@@ -234,18 +306,51 @@ class ChessCanvas extends Phaser.Scene {
   * isInBoardMove 是否在棋盘上拖动棋子
   */
 
-  checkPiecePosition(moveX, moveY, isInBoardMove) {
-    let isEmpty = true;
+  checkPiecePosition(moveX, moveY, type, isInBoardMove) {
+    let target = null,
+      cleanPiece = null;
     const group = !isInBoardMove
       ? this.pieceGroup.getChildren()
       : this.beforeMovePieceGroup;
     let attr = group.filter(piece => {
       return piece.x === moveX && piece.y === moveY;
     });
+
     if (attr.length > 0) {
-      isEmpty = false;
+      target = attr[0];
+      if (isInBoardMove) {
+        // 拖动到同类棋子上返回原来位置
+        if (type === target.type) {
+          this.tweens.add({
+            targets: this.movePiece,
+            props: {
+              x: {
+                value: this.beforeMovePieceXY[0],
+                duration: 600,
+                ease: 'Power2'
+              },
+              y: {
+                value: this.beforeMovePieceXY[1],
+                duration: 650,
+                ease: 'Power2'
+              }
+            }
+          });
+        } // 拖动到对方棋子，清除对方棋子
+        else {
+          this.pieceGroup.getChildren().forEach(item => {
+            if (
+              item.x === target.x &&
+              item.y === target.y &&
+              item.getData('type') !== type
+            ) {
+              cleanPiece = item;
+            }
+          });
+          this.pieceGroup.remove(cleanPiece, true);
+        }
+      }
     }
-    return isEmpty;
   }
 
   //清除棋篓选中状态
