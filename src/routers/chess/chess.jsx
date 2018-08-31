@@ -144,9 +144,6 @@ class ChessCanvas extends Phaser.Scene {
     // 设置棋篓集合
     this.pieceBasketGroup = this.add.group();
 
-    //初始化棋盘数据
-    this.initPieceBoard();
-
     //添加新棋子的原始坐标
     let movePieceXY = [0, 0];
 
@@ -178,8 +175,13 @@ class ChessCanvas extends Phaser.Scene {
       gridIndex++;
     }
 
-    // 初始化摆放棋子
-    this.initBoard();
+    if (parentThis.state.list.length > 0) {
+      // 初始化棋盘数据
+      this.initPieceBoard();
+    } else {
+      // 初始化摆放棋子
+      this.initBoard();
+    }
 
     // 初始化棋篓
     this.initPieceBasket();
@@ -577,11 +579,15 @@ class ChessCanvas extends Phaser.Scene {
           .sprite(
             this.GAME_PARAMS.boardX + item.x * this.GAME_PARAMS.gridSize,
             this.GAME_PARAMS.boardY + item.y * this.GAME_PARAMS.gridSize,
-            'moverPiece',
-            item.role
+            'piece',
+            item.role > 5 ? item.role - 4 : item.role
           )
           .setDepth(2)
           .setInteractive()
+          .setData({
+            type: item.role > 5 ? 'black' : 'white',
+            role: item.role
+          })
           .setName('piece');
         this.input.setDraggable(piece);
         this.pieceGroup.add(piece);
@@ -761,17 +767,24 @@ class Chess extends Component {
   componentDidMount() {
     Course.getActivityConfig(VALUE.ACT_ID).then(result => {
       if (result) {
-        /*result = [
-          { role: 0, x: 7, y: 5 },
-          { role: 0, x: 4, y: 6 },
-          { role: 0, x: 5, y: 11 },
-          { role: 1, x: 0, y: 9 },
-          { role: 1, x: 2, y: 11 },
-          { role: 1, x: 7, y: 9 }
+        result = [
+          { role: 11, x: 0, y: 0 },
+          { role: 12, x: 1, y: 0 },
+          { role: 13, x: 2, y: 0 },
+          { role: 14, x: 3, y: 0 },
+          { role: 15, x: 4, y: 0 },
+          { role: 10, x: 0, y: 1 },
+          { role: 0, x: 0, y: 6 },
+          { role: 1, x: 0, y: 7 },
+          { role: 2, x: 1, y: 7 },
+          { role: 3, x: 2, y: 7 },
+          { role: 4, x: 3, y: 7 },
+          { role: 5, x: 4, y: 7 }
         ];
         this.setState({
           list: result
-        });*/
+        });
+
         this.initWeiqi();
       }
     });
