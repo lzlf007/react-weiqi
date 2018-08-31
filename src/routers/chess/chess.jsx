@@ -18,6 +18,7 @@ import Grid from '../../assets/images/chess_grid.png';
 import CleanBtn from '../../assets/images/btnClean.png';
 import Piece from '../../assets/images/chess_piece.png';
 import PieceBasket from '../../assets/images/chess_basket.png';
+import ChessSelected from '../../assets/images/chess_selected.png';
 
 Settings.defaultLocale = 'en';
 
@@ -102,6 +103,8 @@ class ChessCanvas extends Phaser.Scene {
       { frame: 10, role: 14, x: 569, y: 931 },
       { frame: 11, role: 15, x: 684, y: 931 }
     ];
+    // 棋篓、棋子选中框
+    this.selectBox = null;
   }
 
   preload() {
@@ -114,6 +117,10 @@ class ChessCanvas extends Phaser.Scene {
     this.load.image({
       key: 'grid',
       url: Grid
+    });
+    this.load.image({
+      key: 'chessSelected',
+      url: ChessSelected
     });
     this.load.spritesheet('cleanBtn', CleanBtn, {
       frameWidth: 169,
@@ -142,11 +149,12 @@ class ChessCanvas extends Phaser.Scene {
 
     //添加新棋子的原始坐标
     let movePieceXY = [0, 0];
-    //当前棋盘上拖动棋子的原始坐标
-    let pieceXY = [0, 0];
 
     // 添加棋盘
     this.add.image(375, 375, 'chessBoard');
+
+    // 添加选中框
+    this.selectBox = this.add.image(-100, -100, 'chessSelected').setDepth(4);
 
     // 生成格子
     let gridIndex = 0;
@@ -176,6 +184,17 @@ class ChessCanvas extends Phaser.Scene {
     // 初始化棋篓
     this.initPieceBasket();
 
+    // 添加清空按钮
+    this.cleanBtn = this.add
+      .sprite(274, 1050, 'cleanBtn', 0)
+      .setInteractive()
+      .setName('cleanBtn');
+    // 添加保存按钮
+    this.saveBtn = this.add
+      .sprite(474, 1050, 'cleanBtn', 2)
+      .setInteractive()
+      .setName('saveBtn');
+
     this.input.dragDistanceThreshold = 5;
 
     // 创建移动棋子
@@ -190,8 +209,159 @@ class ChessCanvas extends Phaser.Scene {
     this.input.on(
       'gameobjectdown',
       function(pointer, gameObject) {
-        const that = this;
-        // console.log(gameObject);
+        // 点击棋篓
+        if (gameObject.name === 'pieceBasket') {
+          this.cleanBoardState();
+          this.selectBox.x = gameObject.x;
+          this.selectBox.y = gameObject.y;
+          gameObject.setData('selected', true);
+          // console.log(this.pieceBasketGroup.getChildren());
+        }
+
+        // 点击棋盘格子
+        if (gameObject.name === 'grid') {
+          // 目标格子
+          let targetGrid = this.checkMovePiece(gameObject.x, gameObject.y);
+          // 获取当前选中的棋篓
+          let selectedBasket = this.getSelectedBasket();
+          // 当前选中的棋子
+          let nowSelectedPiece = this.checkMovePiece(
+            this.selectBox.x,
+            this.selectBox.y
+          );
+
+          //设置棋子选中状态
+          timerCount++;
+          timer = setTimeout(function() {
+            timerCount = 0;
+            clearTimeout(timer);
+          }, 250);
+
+          // 当前格子上有棋子
+          if (targetGrid) {
+            // 当前有选中的棋篓
+            if (selectedBasket) {
+              this.cleanBoardState();
+              this.selectBox.x = gameObject.x;
+              this.selectBox.y = gameObject.y;
+            }
+
+            // 选中的棋子和目标棋子不是同一方，吃掉对方棋子
+            if (
+              nowSelectedPiece &&
+              nowSelectedPiece.getData('type') !== targetGrid.getData('type')
+            ) {
+              this.tweens.add({
+                targets: [nowSelectedPiece, this.selectBox],
+                props: {
+                  x: { value: gameObject.x, duration: 150, ease: 'Power2' },
+                  y: { value: gameObject.y, duration: 150, ease: 'Power2' }
+                },
+                onComplete: () => {
+                  this.cleanPiece(targetGrid);
+                  this.cleanSelected();
+                }
+              });
+            } else {
+              this.selectBox.x = gameObject.x;
+              this.selectBox.y = gameObject.y;
+            }
+
+            // 双击去子
+            if (timerCount === 2) {
+              this.cleanPiece(targetGrid);
+              this.cleanSelected();
+            }
+          } // 当前格子上没有棋子
+          else {
+            //从棋篓中添加棋子到此
+            if (selectedBasket) {
+              let piece = this.add
+                .sprite(
+                  selectedBasket.x,
+                  selectedBasket.y,
+                  'piece',
+                  selectedBasket.frame.name
+                )
+                .setDepth(2)
+                .setInteractive()
+                .setData({
+                  type: selectedBasket.getData('type'),
+                  role: selectedBasket.getData('role')
+                })
+                .setName('piece');
+              this.input.setDraggable(piece);
+              this.pieceGroup.add(piece);
+              this.tweens.add({
+                targets: piece,
+                props: {
+                  x: { value: gameObject.x, duration: 100, ease: 'Power2' },
+                  y: { value: gameObject.y, duration: 100, ease: 'Power2' }
+                },
+                onComplete: () => {}
+              });
+            }
+
+            // 获取当前选中的棋子，移动到指定的位置
+            if (nowSelectedPiece) {
+              this.tweens.add({
+                targets: [nowSelectedPiece, this.selectBox],
+                props: {
+                  x: { value: gameObject.x, duration: 100, ease: 'Power2' },
+                  y: { value: gameObject.y, duration: 100, ease: 'Power2' }
+                },
+                onComplete: () => {
+                  setTimeout(() => {
+                    this.cleanSelected();
+                  }, 100);
+                }
+              });
+            }
+          }
+
+          // 取消选中棋子
+          if (
+            targetGrid &&
+            nowSelectedPiece &&
+            (targetGrid.x === nowSelectedPiece.x &&
+              targetGrid.y === nowSelectedPiece.y)
+          ) {
+            this.cleanSelected();
+          }
+        }
+
+        // 点击清空棋盘按钮
+        if (gameObject.name === 'cleanBtn') {
+          this.cleanBtn.setFrame(1);
+          setTimeout(() => {
+            this.cleanBtn.setFrame(0);
+          }, 150);
+
+          T.confirm({
+            title: '提示',
+            message: '确定要清空棋盘么？',
+            option: [
+              {
+                text: '确定',
+                fn: () => {
+                  this.pieceGroup.clear(false, true);
+                }
+              },
+              {
+                text: '取消'
+              }
+            ]
+          });
+        }
+
+        // 点击保存棋盘数据
+        if (gameObject.name === 'saveBtn') {
+          this.saveBtn.setFrame(3);
+          setTimeout(() => {
+            this.saveBtn.setFrame(2);
+          }, 150);
+          this.saveData();
+        }
       },
       this
     );
@@ -217,7 +387,10 @@ class ChessCanvas extends Phaser.Scene {
         if (gameObject.name === 'pieceBasket') {
           movePieceXY[0] = gameObject.x;
           movePieceXY[1] = gameObject.y;
-          newPiece.setFrame(gameObject.frame.name).setTint(0xff0000);
+          newPiece
+            .setFrame(gameObject.frame.name)
+            .setData('role', gameObject.getData('role'))
+            .setTint(0xff0000);
         }
       },
       this
@@ -230,6 +403,18 @@ class ChessCanvas extends Phaser.Scene {
         if (this.movePiece) {
           this.movePiece.x = dragX;
           this.movePiece.y = dragY;
+          if (this.movePiece.x < this.GAME_PARAMS.boardX) {
+            this.movePiece.x = this.GAME_PARAMS.boardX;
+          }
+          if (this.movePiece.x > this.GAME_PARAMS.maxBoardX) {
+            this.movePiece.x = this.GAME_PARAMS.maxBoardX;
+          }
+          if (this.movePiece.y < this.GAME_PARAMS.boardY) {
+            this.movePiece.y = this.GAME_PARAMS.boardY;
+          }
+          if (this.movePiece.y > this.GAME_PARAMS.maxBoardY) {
+            this.movePiece.y = this.GAME_PARAMS.maxBoardY;
+          }
           for (let i = 0; i < grids.length; i++) {
             if (
               Math.abs(this.movePiece.x - grids[i].x) <= 42 &&
@@ -237,6 +422,8 @@ class ChessCanvas extends Phaser.Scene {
             ) {
               this.movePiece.x = grids[i].x;
               this.movePiece.y = grids[i].y;
+              this.selectBox.x = grids[i].x;
+              this.selectBox.y = grids[i].y;
             }
           }
         }
@@ -275,11 +462,12 @@ class ChessCanvas extends Phaser.Scene {
             );
             this.movePiece.setDepth(2);
             this.movePiece = null;
+            this.cleanSelected();
           }
           // console.log(this.pieceGroup.getChildren());
         }
 
-        //拖拽添加黒棋或者白棋
+        //拖拽棋篓添加棋子
         if (gameObject.name === 'pieceBasket') {
           //如果拖拽到棋盘内则添加棋子
           if (
@@ -295,12 +483,13 @@ class ChessCanvas extends Phaser.Scene {
               .setInteractive()
               .setData({
                 type: newPiece.frame.name > 5 ? 'black' : 'white',
-                role: newPiece.frame.name
+                role: newPiece.getData('role')
               })
               .setName('piece');
             this.input.setDraggable(piece);
             this.pieceGroup.add(piece);
             newPiece.setAlpha(0);
+            this.cleanBoardState();
           } else {
             this.tweens.add({
               targets: newPiece,
@@ -370,7 +559,8 @@ class ChessCanvas extends Phaser.Scene {
         .setInteractive()
         .setData({
           type: this.pieceBasketData[i].frame > 5 ? 'black' : 'white',
-          role: this.pieceBasketData[i].role
+          role: this.pieceBasketData[i].role,
+          selected: false
         })
         .setName('pieceBasket');
       this.input.setDraggable(pieceBasket);
@@ -464,7 +654,8 @@ class ChessCanvas extends Phaser.Scene {
               cleanPiece = item;
             }
           });
-          this.pieceGroup.remove(cleanPiece, true);
+          // this.pieceGroup.remove(cleanPiece, true);
+          this.cleanPiece(cleanPiece);
         }
       }
     }
@@ -477,10 +668,50 @@ class ChessCanvas extends Phaser.Scene {
     }
   }
 
-  //清除棋篓选中状态
+  // 清除棋篓、棋子选中状态
   cleanBoardState() {
-    this.blackBoard.setFrame(0);
-    this.whiteBoard.setFrame(0);
+    this.cleanSelected();
+    this.pieceBasketGroup.getChildren().forEach(item => {
+      item.setData('selected', false);
+    });
+  }
+
+  // 清除棋篓、棋子选中状态
+  cleanSelected() {
+    this.selectBox.x = -100;
+    this.selectBox.y = -100;
+  }
+
+  // 清除棋子
+  cleanPiece(piece) {
+    let moveXY = [-100, -100];
+    let pieceFrame = piece.frame.name;
+    this.pieceBasketGroup.getChildren().forEach(item => {
+      if (item.frame.name === pieceFrame) {
+        moveXY[0] = item.x;
+        moveXY[1] = item.y;
+      }
+    });
+    piece.setDepth(3);
+    this.tweens.add({
+      targets: [piece],
+      props: {
+        x: { value: moveXY[0], duration: 600, ease: 'Power2' },
+        y: { value: moveXY[1], duration: 650, ease: 'Power2' }
+      },
+      onComplete: () => {
+        this.pieceGroup.remove(piece, true);
+        this.cleanSelected();
+      }
+    });
+  }
+
+  // 获取当前选中的棋篓
+  getSelectedBasket() {
+    let attr = this.pieceBasketGroup.getChildren().filter(item => {
+      return item.getData('selected') === true;
+    });
+    return attr.length > 0 ? attr[0] : null;
   }
 
   //清除棋子选中状态
@@ -505,7 +736,7 @@ class ChessCanvas extends Phaser.Scene {
     }
     const groupData = pieceGroup.map(list => {
       return {
-        role: list.frame.name % 2 === 0 ? 0 : 1,
+        role: list.getData('role'),
         x: Math.round(
           (list.x - this.GAME_PARAMS.boardX) / this.GAME_PARAMS.gridSize
         ),
