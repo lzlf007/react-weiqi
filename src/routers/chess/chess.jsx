@@ -29,6 +29,8 @@ class ChessCanvas extends Phaser.Scene {
   constructor() {
     super('ChessCanvas');
 
+    // 棋盘容器
+    this.boardContainer = [];
     // 棋盘上棋子实时集合
     this.pieceGroup = [];
     // 棋盘上移动棋子前的集合
@@ -41,12 +43,18 @@ class ChessCanvas extends Phaser.Scene {
     this.saveBtn = null;
     // 棋盘参数
     this.GAME_PARAMS = {
+      boardContainerX: 0, // 棋盘容器起始x坐标
+      boardContainerY: 0, // 棋盘容器起始y坐标
       boardX: 43 + 42, // 棋盘起始x坐标
       boardY: 43 + 42, // 棋盘起始y坐标
       gridSize: 83, // 棋盘格子大小
       maxBoardX: 43 + 8 * 83, // 棋盘上x最大值
       maxBoardY: 43 + 8 * 83 // 棋盘上y最大值
     };
+    // this.GAME_PARAMS.maxBoardX = this.GAME_PARAMS.boardContainerX + this.GAME_PARAMS.boardX;
+    // this.GAME_PARAMS.minBoardY = this.GAME_PARAMS.boardContainerY + this.GAME_PARAMS.boardY;
+    // this.GAME_PARAMS.maxBoardX = this.GAME_PARAMS.boardContainerX + this.GAME_PARAMS.boardX + 18 * this.GAME_PARAMS.gridSize;
+    // this.GAME_PARAMS.maxBoardY = this.GAME_PARAMS.boardContainerY + this.GAME_PARAMS.boardY + 18 * this.GAME_PARAMS.gridSize;
     // 当前拖动的棋子
     this.movePiece = null;
     // 棋子拖动前位置
@@ -139,6 +147,8 @@ class ChessCanvas extends Phaser.Scene {
     });
   }
   create() {
+    //设置棋盘容器
+    // this.boardContainer = this.add.container(this.GAME_PARAMS.boardContainerX, this.GAME_PARAMS.boardContainerY).setSize(750,750);
     // 设置棋子集合
     this.pieceGroup = this.add.group();
     // 设置棋篓集合

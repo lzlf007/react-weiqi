@@ -24,6 +24,8 @@ class Weiqi extends Phaser.Scene {
   constructor() {
     super('Weiqi');
 
+    // 棋盘容器
+    this.boardContainer = [];
     // 棋盘上棋子实时集合
     this.pieceGroup = [];
     // 棋盘上移动棋子前的集合
@@ -38,12 +40,28 @@ class Weiqi extends Phaser.Scene {
     this.saveBtn = null;
     // 棋盘参数
     this.GAME_PARAMS = {
-      boardX: 33, // 棋盘起始x坐标
-      boardY: 33, // 棋盘起始y坐标
+      boardContainerX: 5, // 棋盘容器起始x坐标
+      boardContainerY: 5, // 棋盘容器起始y坐标
+      boardX: 28, // 棋盘起始x坐标
+      boardY: 28, // 棋盘起始y坐标
       gridSize: 38, // 棋盘格子大小
-      maxBoardX: 33 + 18 * 38, // 棋盘上x最大值
-      maxBoardY: 33 + 18 * 38 // 棋盘上y最大值
+      minBoardX: 0, // 棋盘上x最小值
+      minBoardY: 0, // 棋盘上y最小值
+      maxBoardX: 0, // 棋盘上x最大值
+      maxBoardY: 0 // 棋盘上y最大值
     };
+    this.GAME_PARAMS.minBoardX =
+      this.GAME_PARAMS.boardContainerX + this.GAME_PARAMS.boardX;
+    this.GAME_PARAMS.minBoardY =
+      this.GAME_PARAMS.boardContainerY + this.GAME_PARAMS.boardY;
+    this.GAME_PARAMS.maxBoardX =
+      this.GAME_PARAMS.boardContainerX +
+      this.GAME_PARAMS.boardX +
+      18 * this.GAME_PARAMS.gridSize;
+    this.GAME_PARAMS.maxBoardY =
+      this.GAME_PARAMS.boardContainerY +
+      this.GAME_PARAMS.boardY +
+      18 * this.GAME_PARAMS.gridSize;
   }
 
   preload() {
@@ -71,6 +89,14 @@ class Weiqi extends Phaser.Scene {
     });
   }
   create() {
+    //设置棋盘容器
+    this.boardContainer = this.add
+      .container(
+        this.GAME_PARAMS.boardContainerX,
+        this.GAME_PARAMS.boardContainerY
+      )
+      .setSize(740, 740);
+
     // 设置棋子集合
     this.pieceGroup = this.add.group();
 
@@ -84,13 +110,15 @@ class Weiqi extends Phaser.Scene {
 
     // 绘制背景框
     let bg1 = this.add.graphics({ fillStyle: { color: 0xefa276 } });
-    let bg1Rect = new Phaser.Geom.Rectangle(5, 5, 740, 740);
-    bg1.fillRectShape(bg1Rect);
+    let bg1Rect = new Phaser.Geom.Rectangle(0, 0, 740, 740);
+    // bg1.fillRectShape(bg1Rect);
+    this.boardContainer.add(bg1.fillRectShape(bg1Rect));
 
     // 绘制背景框2
     let bg2 = this.add.graphics({ lineStyle: { width: 4, color: 0x560000 } });
-    let bg2Rect = new Phaser.Geom.Rectangle(26, 26, 698, 698);
-    bg2.strokeRectShape(bg2Rect);
+    let bg2Rect = new Phaser.Geom.Rectangle(21, 21, 698, 698);
+    // bg2.strokeRectShape(bg2Rect);
+    this.boardContainer.add(bg2.strokeRectShape(bg2Rect));
 
     // 绘制网络
     for (let i = 0; i < 19; i++) {
@@ -109,8 +137,10 @@ class Weiqi extends Phaser.Scene {
         this.GAME_PARAMS.gridSize * 18 + this.GAME_PARAMS.boardY,
         this.GAME_PARAMS.boardY + i * this.GAME_PARAMS.gridSize
       );
-      lineObj.strokeLineShape(verticalLine);
-      lineObj.strokeLineShape(horizontal);
+      //lineObj.strokeLineShape(verticalLine);
+      //lineObj.strokeLineShape(horizontal);
+      this.boardContainer.add(lineObj.strokeLineShape(verticalLine));
+      this.boardContainer.add(lineObj.strokeLineShape(horizontal));
     }
 
     // 绘制网络圆点
@@ -159,7 +189,8 @@ class Weiqi extends Phaser.Scene {
         4
       );
       let circleObj = this.add.graphics({ fillStyle: { color: 0x560000 } });
-      circleObj.fillCircleShape(circle);
+      // circleObj.fillCircleShape(circle);
+      this.boardContainer.add(circleObj.fillCircleShape(circle));
     }
 
     // 生成格子
@@ -183,6 +214,8 @@ class Weiqi extends Phaser.Scene {
       grids.push(grid);
       gridIndex++;
     }
+
+    this.boardContainer.add(grids);
 
     // 生成棋篓
     this.blackBoard = this.add
@@ -325,8 +358,16 @@ class Weiqi extends Phaser.Scene {
             this.tweens.add({
               targets: movePiece,
               props: {
-                x: { value: gameObject.x, duration: 100, ease: 'Power2' },
-                y: { value: gameObject.y, duration: 100, ease: 'Power2' }
+                x: {
+                  value: gameObject.x + this.GAME_PARAMS.boardContainerX,
+                  duration: 100,
+                  ease: 'Power2'
+                },
+                y: {
+                  value: gameObject.y + this.GAME_PARAMS.boardContainerY,
+                  duration: 100,
+                  ease: 'Power2'
+                }
               },
               onComplete: function() {
                 let piece = that.add
@@ -354,8 +395,16 @@ class Weiqi extends Phaser.Scene {
             this.tweens.add({
               targets: pieceGroup[0],
               props: {
-                x: { value: gameObject.x, duration: 300, ease: 'Power2' },
-                y: { value: gameObject.y, duration: 300, ease: 'Power2' }
+                x: {
+                  value: gameObject.x + this.GAME_PARAMS.boardContainerX,
+                  duration: 300,
+                  ease: 'Power2'
+                },
+                y: {
+                  value: gameObject.y + this.GAME_PARAMS.boardContainerY,
+                  duration: 300,
+                  ease: 'Power2'
+                }
               },
               onComplete: function() {
                 pieceGroup[0].setFrame(
@@ -450,14 +499,18 @@ class Weiqi extends Phaser.Scene {
         movePiece.y = dragY;
         for (let i = 0; i < grids.length; i++) {
           if (
-            Math.abs(movePiece.x - grids[i].x) <= 19 &&
-            Math.abs(movePiece.y - grids[i].y) <= 19
+            Math.abs(
+              movePiece.x - (grids[i].x + this.GAME_PARAMS.boardContainerX)
+            ) <= 19 &&
+            Math.abs(
+              movePiece.y - (grids[i].y + this.GAME_PARAMS.boardContainerY)
+            ) <= 19
           ) {
             // grids[i].setFrame(1);
-            movePiece.x = grids[i].x;
-            movePiece.y = grids[i].y;
-            guidelines.x = grids[i].x;
-            guidelines.y = grids[i].y;
+            movePiece.x = grids[i].x + this.GAME_PARAMS.boardContainerX;
+            movePiece.y = grids[i].y + this.GAME_PARAMS.boardContainerY;
+            guidelines.x = grids[i].x + this.GAME_PARAMS.boardContainerX;
+            guidelines.y = grids[i].y + this.GAME_PARAMS.boardContainerY;
           } else {
             // grids[i].setFrame(0);
           }
@@ -467,27 +520,31 @@ class Weiqi extends Phaser.Scene {
       else if (gameObject.name === 'piece') {
         gameObject.x = dragX;
         gameObject.y = dragY;
-        if (gameObject.x < this.GAME_PARAMS.boardX) {
-          gameObject.x = this.GAME_PARAMS.boardX;
+        if (gameObject.x < this.GAME_PARAMS.minBoardX) {
+          gameObject.x = this.GAME_PARAMS.minBoardX;
         }
         if (gameObject.x > this.GAME_PARAMS.maxBoardX) {
           gameObject.x = this.GAME_PARAMS.maxBoardX;
         }
-        if (gameObject.y < this.GAME_PARAMS.boardY) {
-          gameObject.y = this.GAME_PARAMS.boardY;
+        if (gameObject.y < this.GAME_PARAMS.minBoardY) {
+          gameObject.y = this.GAME_PARAMS.minBoardY;
         }
         if (gameObject.y > this.GAME_PARAMS.maxBoardY) {
           gameObject.y = this.GAME_PARAMS.maxBoardY;
         }
         for (let i = 0; i < grids.length; i++) {
           if (
-            Math.abs(gameObject.x - grids[i].x) <= 19 &&
-            Math.abs(gameObject.y - grids[i].y) <= 19
+            Math.abs(
+              gameObject.x - (grids[i].x + this.GAME_PARAMS.boardContainerX)
+            ) <= 19 &&
+            Math.abs(
+              gameObject.y - (grids[i].y + this.GAME_PARAMS.boardContainerY)
+            ) <= 19
           ) {
-            gameObject.x = grids[i].x;
-            gameObject.y = grids[i].y;
-            guidelines.x = grids[i].x;
-            guidelines.y = grids[i].y;
+            gameObject.x = grids[i].x + this.GAME_PARAMS.boardContainerX;
+            gameObject.y = grids[i].y + this.GAME_PARAMS.boardContainerY;
+            guidelines.x = grids[i].x + this.GAME_PARAMS.boardContainerX;
+            guidelines.y = grids[i].y + this.GAME_PARAMS.boardContainerY;
           }
         }
       }
@@ -504,12 +561,10 @@ class Weiqi extends Phaser.Scene {
         ) {
           //如果拖拽到棋盘内则添加棋子
           if (
-            movePiece.x >= this.GAME_PARAMS.boardX &&
-            movePiece.x <=
-              this.GAME_PARAMS.boardX + this.GAME_PARAMS.gridSize * 18 &&
-            movePiece.y >= this.GAME_PARAMS.boardY &&
-            movePiece.y <=
-              this.GAME_PARAMS.boardY + this.GAME_PARAMS.gridSize * 18 &&
+            movePiece.x >= this.GAME_PARAMS.minBoardX &&
+            movePiece.x <= this.GAME_PARAMS.maxBoardX &&
+            movePiece.y >= this.GAME_PARAMS.minBoardY &&
+            movePiece.y <= this.GAME_PARAMS.maxBoardY &&
             this.checkPiecePosition(movePiece.x, movePiece.y)
           ) {
             let frame = gameObject.name === 'blackMovePiece' ? 0 : 1;
@@ -577,8 +632,8 @@ class Weiqi extends Phaser.Scene {
       list.forEach(item => {
         let piece = this.add
           .sprite(
-            this.GAME_PARAMS.boardX + item.x * this.GAME_PARAMS.gridSize,
-            this.GAME_PARAMS.boardY + item.y * this.GAME_PARAMS.gridSize,
+            this.GAME_PARAMS.minBoardX + item.x * this.GAME_PARAMS.gridSize,
+            this.GAME_PARAMS.minBoardY + item.y * this.GAME_PARAMS.gridSize,
             'moverPiece',
             item.role
           )
