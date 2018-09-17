@@ -45,16 +45,30 @@ class ChessCanvas extends Phaser.Scene {
     this.GAME_PARAMS = {
       boardContainerX: 0, // 棋盘容器起始x坐标
       boardContainerY: 0, // 棋盘容器起始y坐标
-      boardX: 43 + 42, // 棋盘起始x坐标
-      boardY: 43 + 42, // 棋盘起始y坐标
+      boardX: 43, // 棋盘起始x坐标
+      boardY: 43, // 棋盘起始y坐标
       gridSize: 83, // 棋盘格子大小
-      maxBoardX: 43 + 8 * 83, // 棋盘上x最大值
-      maxBoardY: 43 + 8 * 83 // 棋盘上y最大值
+      minBoardX: 0, // 棋盘上x最小值
+      minBoardY: 0, // 棋盘上y最小值
+      maxBoardX: 0, // 棋盘上x最大值
+      maxBoardY: 0 // 棋盘上y最大值
     };
-    // this.GAME_PARAMS.maxBoardX = this.GAME_PARAMS.boardContainerX + this.GAME_PARAMS.boardX;
-    // this.GAME_PARAMS.minBoardY = this.GAME_PARAMS.boardContainerY + this.GAME_PARAMS.boardY;
-    // this.GAME_PARAMS.maxBoardX = this.GAME_PARAMS.boardContainerX + this.GAME_PARAMS.boardX + 18 * this.GAME_PARAMS.gridSize;
-    // this.GAME_PARAMS.maxBoardY = this.GAME_PARAMS.boardContainerY + this.GAME_PARAMS.boardY + 18 * this.GAME_PARAMS.gridSize;
+    this.GAME_PARAMS.minBoardX =
+      this.GAME_PARAMS.boardContainerX +
+      this.GAME_PARAMS.boardX +
+      parseInt(this.GAME_PARAMS.gridSize / 2);
+    this.GAME_PARAMS.minBoardY =
+      this.GAME_PARAMS.boardContainerY +
+      this.GAME_PARAMS.boardY +
+      parseInt(this.GAME_PARAMS.gridSize / 2);
+    this.GAME_PARAMS.maxBoardX =
+      this.GAME_PARAMS.boardContainerX +
+      this.GAME_PARAMS.boardX +
+      8 * this.GAME_PARAMS.gridSize;
+    this.GAME_PARAMS.maxBoardY =
+      this.GAME_PARAMS.boardContainerY +
+      this.GAME_PARAMS.boardY +
+      8 * this.GAME_PARAMS.gridSize;
     // 当前拖动的棋子
     this.movePiece = null;
     // 棋子拖动前位置
@@ -158,7 +172,13 @@ class ChessCanvas extends Phaser.Scene {
     let movePieceXY = [0, 0];
 
     // 添加棋盘
-    this.add.image(375, 375, 'chessBoard');
+    this.add
+      .image(
+        this.GAME_PARAMS.boardContainerX,
+        this.GAME_PARAMS.boardContainerY,
+        'chessBoard'
+      )
+      .setDisplayOrigin(0);
 
     // 添加选中框
     this.selectBox = this.add.image(-100, -100, 'chessSelected').setDepth(4);
@@ -173,8 +193,8 @@ class ChessCanvas extends Phaser.Scene {
       let row = parseInt(i / 8, 10);
       let grid = this.add
         .image(
-          this.GAME_PARAMS.boardX + gridIndex * this.GAME_PARAMS.gridSize,
-          this.GAME_PARAMS.boardY + row * this.GAME_PARAMS.gridSize,
+          this.GAME_PARAMS.minBoardX + gridIndex * this.GAME_PARAMS.gridSize,
+          this.GAME_PARAMS.minBoardY + row * this.GAME_PARAMS.gridSize,
           'grid'
         )
         .setInteractive()
@@ -415,14 +435,14 @@ class ChessCanvas extends Phaser.Scene {
         if (this.movePiece) {
           this.movePiece.x = dragX;
           this.movePiece.y = dragY;
-          if (this.movePiece.x < this.GAME_PARAMS.boardX) {
-            this.movePiece.x = this.GAME_PARAMS.boardX;
+          if (this.movePiece.x < this.GAME_PARAMS.minBoardX) {
+            this.movePiece.x = this.GAME_PARAMS.minBoardX;
           }
           if (this.movePiece.x > this.GAME_PARAMS.maxBoardX) {
             this.movePiece.x = this.GAME_PARAMS.maxBoardX;
           }
-          if (this.movePiece.y < this.GAME_PARAMS.boardY) {
-            this.movePiece.y = this.GAME_PARAMS.boardY;
+          if (this.movePiece.y < this.GAME_PARAMS.minBoardY) {
+            this.movePiece.y = this.GAME_PARAMS.minBoardY;
           }
           if (this.movePiece.y > this.GAME_PARAMS.maxBoardY) {
             this.movePiece.y = this.GAME_PARAMS.maxBoardY;
@@ -483,9 +503,9 @@ class ChessCanvas extends Phaser.Scene {
         if (gameObject.name === 'pieceBasket') {
           //如果拖拽到棋盘内则添加棋子
           if (
-            newPiece.x >= this.GAME_PARAMS.boardX &&
+            newPiece.x >= this.GAME_PARAMS.minBoardX &&
             newPiece.x <= this.GAME_PARAMS.maxBoardX &&
-            newPiece.y >= this.GAME_PARAMS.boardY &&
+            newPiece.y >= this.GAME_PARAMS.minBoardY &&
             newPiece.y <= this.GAME_PARAMS.maxBoardY &&
             this.checkPiecePosition(newPiece.x, newPiece.y)
           ) {
@@ -538,8 +558,8 @@ class ChessCanvas extends Phaser.Scene {
       }
       let piece = this.add
         .sprite(
-          this.GAME_PARAMS.boardX + j * this.GAME_PARAMS.gridSize,
-          this.GAME_PARAMS.boardY + row * this.GAME_PARAMS.gridSize,
+          this.GAME_PARAMS.minBoardX + j * this.GAME_PARAMS.gridSize,
+          this.GAME_PARAMS.minBoardY + row * this.GAME_PARAMS.gridSize,
           'piece',
           this.boardData[i].frame
         )
@@ -587,8 +607,8 @@ class ChessCanvas extends Phaser.Scene {
       list.forEach(item => {
         let piece = this.add
           .sprite(
-            this.GAME_PARAMS.boardX + item.x * this.GAME_PARAMS.gridSize,
-            this.GAME_PARAMS.boardY + item.y * this.GAME_PARAMS.gridSize,
+            this.GAME_PARAMS.minBoardX + item.x * this.GAME_PARAMS.gridSize,
+            this.GAME_PARAMS.minBoardY + item.y * this.GAME_PARAMS.gridSize,
             'piece',
             item.role > 5 ? item.role - 4 : item.role
           )
@@ -746,6 +766,7 @@ class ChessCanvas extends Phaser.Scene {
   // 保存棋子数据
   saveData = () => {
     const pieceGroup = this.pieceGroup.getChildren();
+    console.log(pieceGroup);
     if (pieceGroup.length < 1) {
       T.alert('请先摆放棋谱');
       return;
@@ -754,10 +775,10 @@ class ChessCanvas extends Phaser.Scene {
       return {
         role: list.getData('role'),
         x: Math.round(
-          (list.x - this.GAME_PARAMS.boardX) / this.GAME_PARAMS.gridSize
+          (list.x - this.GAME_PARAMS.minBoardX) / this.GAME_PARAMS.gridSize
         ),
         y: Math.round(
-          (list.y - this.GAME_PARAMS.boardY) / this.GAME_PARAMS.gridSize
+          (list.y - this.GAME_PARAMS.minBoardY) / this.GAME_PARAMS.gridSize
         )
       };
     });
