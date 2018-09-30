@@ -56,11 +56,11 @@ class ChessCanvas extends Phaser.Scene {
     this.GAME_PARAMS.minBoardX =
       this.GAME_PARAMS.boardContainerX +
       this.GAME_PARAMS.boardX +
-      parseInt(this.GAME_PARAMS.gridSize / 2);
+      parseInt(this.GAME_PARAMS.gridSize / 2, 10);
     this.GAME_PARAMS.minBoardY =
       this.GAME_PARAMS.boardContainerY +
       this.GAME_PARAMS.boardY +
-      parseInt(this.GAME_PARAMS.gridSize / 2);
+      parseInt(this.GAME_PARAMS.gridSize / 2, 10);
     this.GAME_PARAMS.maxBoardX =
       this.GAME_PARAMS.boardContainerX +
       this.GAME_PARAMS.boardX +
@@ -796,6 +796,8 @@ class Chess extends Component {
   }
 
   componentDidMount() {
+    Course.getTest();
+
     Course.getActivityConfig(VALUE.ACT_ID).then(result => {
       if (result) {
         result = [
